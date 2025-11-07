@@ -4,11 +4,13 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.tatooinoyo</groupId>
     <artifactId>wps-spreadsheet-assistant</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>wps-spreadsheet-assistant</name>
     <description>wps-spreadsheet-assistant</description>
     <packaging>jar</packaging>
-    <url/>
+    <url>https://github.com/tatooinoyo/wps-spreadsheet-assistant</url>
+    <inceptionYear>2025</inceptionYear>
+
     <licenses>
         <license>
             <name>The MIT License (MIT)</name>
@@ -150,7 +152,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <publishingServerId>central</publishingServerId>
-                    <skipPublishing>true</skipPublishing>
+                    <skipPublishing>false</skipPublishing>
                     <checksums>all</checksums>
                 </configuration>
             </plugin>
