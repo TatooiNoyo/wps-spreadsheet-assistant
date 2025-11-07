@@ -1,0 +1,8 @@
+springdoc:
+  enable-spring-security: false
+  group-configs:
+    - group: 测试接口
+      packages-to-scan:
+        - io.github.tatooinoyo.wpsassistant.spreadsheet.controller
+  swagger-ui:
+    enabled: true
