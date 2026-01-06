@@ -1,7 +1,9 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet;
 
 import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.ExcelWriter;
 import com.alibaba.excel.read.listener.PageReadListener;
+import com.alibaba.excel.write.metadata.WriteSheet;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.CellWriteUtil;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.ServletOutputStream;
@@ -10,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -145,6 +148,76 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
             outputStream.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 大数据导出实现，使用基于ID游标的查询和流式写入，避免内存溢出
+     * 适用于导出大量数据的场景
+     * 相比于传统分页，游标方式更加高效且不会出现数据重复或漏查
+     *
+     * @param response  HTTP响应对象
+     * @param batchSize 每次查询的数据量，建议500-1000条
+     */
+    @Override
+    public void exportLargeData(HttpServletResponse response, int batchSize) {
+        if (batchSize <= 0) {
+            batchSize = 500; // 默认每批次500条
+        }
+
+        String fileName = getFilename();
+        ExcelWriter excelWriter = null;
+        ServletOutputStream outputStream = null;
+
+        try {
+            outputStream = response.getOutputStream();
+            response.setContentType("multipart/form-data");
+            response.setCharacterEncoding("utf-8");
+            response.setHeader("Content-Disposition", "attachment;filename*=utf-8'zh_cn'" + URLEncoder.encode(fileName + ".xlsx", StandardCharsets.UTF_8));
+
+            // 创建ExcelWriter对象
+            excelWriter = EasyExcel.write(outputStream, getExcelOutputClass())
+                    .registerWriteHandler(new CellWriteUtil())
+                    .build();
+
+            WriteSheet writeSheet = EasyExcel.writerSheet("sheet1").build();
+
+            Serializable lastId = null; // 游标起始位null
+            List<T> dataList;
+
+            // 使用游标方式查询并写入Excel
+            do {
+                dataList = service.listByIdCursor(lastId, batchSize);
+                if (dataList != null && !dataList.isEmpty()) {
+                    // 将PO转换为Excel输出对象
+                    List<EO> outputElements = dataList.stream()
+                            .map(excelConverter::toExcelFromPO)
+                            .toList();
+
+                    // 写入当前批次数据
+                    excelWriter.write(outputElements, writeSheet);
+
+                    // 更新游标为当前批次最后一条记录的ID
+                    T lastEntity = dataList.get(dataList.size() - 1);
+                    lastId = service.getEntityId(lastEntity);
+                }
+            } while (dataList != null && dataList.size() == batchSize);
+
+        } catch (IOException e) {
+            throw new RuntimeException("导出Excel失败", e);
+        } finally {
+            // 关闭资源
+            if (excelWriter != null) {
+                excelWriter.finish();
+            }
+            if (outputStream != null) {
+                try {
+                    outputStream.flush();
+                    outputStream.close();
+                } catch (IOException e) {
+                    throw new RuntimeException("关闭输出流失败", e);
+                }
+            }
         }
     }
 }

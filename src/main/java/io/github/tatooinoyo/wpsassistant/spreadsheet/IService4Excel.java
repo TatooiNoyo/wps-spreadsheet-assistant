@@ -1,6 +1,7 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -15,4 +16,25 @@ public interface IService4Excel<T> {
     boolean saveBatch(Collection<T> entityList);
 
     List<T> listByIds(Collection<? extends Serializable> idList);
+
+    /**
+     * 基于游标的数据查询，按ID排序
+     *
+     * @param lastId    上一批次的最后一个ID，首次查询传null
+     * @param batchSize 批次大小
+     * @return 数据列表
+     */
+    default List<T> listByIdCursor(Serializable lastId, int batchSize) {
+        return new ArrayList<>();
+    }
+
+    /**
+     * 获取实体的ID
+     *
+     * @param entity 实体对象
+     * @return 实体ID
+     */
+    default Serializable getEntityId(T entity) {
+        return null;
+    }
 }
