@@ -1,5 +1,8 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet;
 
+import com.alibaba.excel.context.AnalysisContext;
+import com.alibaba.excel.read.metadata.holder.xlsx.XlsxReadWorkbookHolder;
+import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.utils.IOUtils;
@@ -8,8 +11,11 @@ import org.apache.poi.openxml4j.opc.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.xml.sax.Attributes;
+import org.xml.sax.helpers.DefaultHandler;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.SAXParserFactory;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +53,82 @@ public class ImageHandler {
             }
         }
         return null;
+    }
+
+    @Nonnull
+    public Map<String, String> initCellImages(AnalysisContext context) {
+        Map<String, String> imageMap = new HashMap<>();
+
+        // 1. 只有 XLSX 格式才有 cellimages.xml (WPS 特色或新版 Office)
+        if (!(context.readWorkbookHolder() instanceof XlsxReadWorkbookHolder workbookHolder)) {
+            return imageMap;
+        }
+
+        OPCPackage pkg = workbookHolder.getOpcPackage();
+
+        try {
+            // 2. 查找 cellimages.xml 部分
+            PackagePartName partName = PackagingURIHelper.createPartName("/xl/cellimages.xml");
+            if (!pkg.containPart(partName)) {
+                return imageMap;
+            }
+
+            PackagePart ciPart = pkg.getPart(partName);
+            // 获取该 XML 的关系文件 (.rels)
+            PackageRelationshipCollection rels = ciPart.getRelationships();
+
+            // 3. 使用 SAX 解析避免大文件 OOM
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            factory.setNamespaceAware(true);
+            // 安全配置，防范 XXE (XML External Entity)
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+
+
+            try (InputStream xmlStream = ciPart.getInputStream()) {
+                factory.newSAXParser().parse(xmlStream, new DefaultHandler() {
+                    private String currentImageId;
+                    private String currentBlipRelId;
+
+                    @Override
+                    public void startElement(String uri, String localName, String qName, Attributes attributes) {
+                        // 匹配 <xdr:cNvPr name="ID_xxx" ... />
+                        if ("cNvPr".equals(localName)) {
+                            currentImageId = attributes.getValue("name");
+                        }
+                        // 匹配 <a:blip r:embed="rId1" ... />
+                        else if ("blip".equals(localName)) {
+                            currentBlipRelId = attributes.getValue("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "embed");
+
+                            if (currentImageId != null && currentBlipRelId != null) {
+                                try {
+                                    // 4. 通过 rId 提取图片并存储
+                                    PackageRelationship rel = rels.getRelationshipByID(currentBlipRelId);
+                                    PackagePart imgPart = pkg.getPart(PackagingURIHelper.createPartName(rel.getTargetURI()));
+
+                                    // 此处建议按需处理，如果图片非常多，建议流式上传而非全部转字节数组
+                                    try (InputStream imgStream = imgPart.getInputStream()) {
+                                        String extension = FilenameUtils.getExtension(imgPart.getPartName().getName());
+                                        String filename = UUID.randomUUID() + "." + extension;
+                                        // 存储服务处理
+                                        String url = storageService.storage(filename, imgStream);
+                                        imageMap.put(currentImageId, url);
+                                    }
+                                } catch (Exception e) {
+                                    log.warn("Failed to extract cell image: {}", currentImageId, e);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 5. 将结果存入上下文，后续 Listener 可通过 context.getCustom() 获取
+            context.readWorkbookHolder().setCustomObject(imageMap);
+        } catch (Exception e) {
+            log.warn("An error occurred while parsing cellimages.xml", e);
+        }
+
+        return imageMap;
     }
 
     /**

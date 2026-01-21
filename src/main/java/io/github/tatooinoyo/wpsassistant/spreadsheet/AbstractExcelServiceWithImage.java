@@ -1,11 +1,9 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet;
 
 import com.alibaba.excel.EasyExcel;
-import com.alibaba.excel.read.listener.PageReadListener;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -34,15 +32,18 @@ public abstract class AbstractExcelServiceWithImage<S extends IService4Excel<T>,
 
         AtomicInteger count = new AtomicInteger();
 
-        // 保存至临时文件
-        File tmp = null;
         try {
-            tmp = File.createTempFile("import-excel-", ".tmp");
-            file.transferTo(tmp);
-
-            Map<String, String> imageMap = imageHandler.loadImagesFromWPSSpreadsheetAndConvertToMap(tmp);
-            EasyExcel.read(tmp, getExcelImportClass(), new PageReadListener<EI>(dataList -> {
+            EasyExcel.read(file.getInputStream(), getExcelImportClass(), new WPSReadListener<EI>((dataList, context) -> {
                 ArrayList<T> pos = new ArrayList<>();
+
+                Object custom = context.getCustom();
+                Map<String, String> imageMap;
+                if (custom instanceof Map customMap) {
+                    imageMap = (Map<String, String>) customMap;
+                } else {
+                    imageMap = imageHandler.initCellImages(context);
+                    log.warn("未解析到XML资源中的图片内容");
+                }
 
                 for (EI e : dataList) {
 
@@ -63,13 +64,6 @@ public abstract class AbstractExcelServiceWithImage<S extends IService4Excel<T>,
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
-        } finally {
-            if (tmp != null) {
-                if (!tmp.delete()) {
-                    log.warn("删除失败: {}", tmp.getAbsolutePath());
-                }
-            }
-
         }
 
 

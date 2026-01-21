@@ -1,6 +1,7 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet.services;
 
 import io.github.tatooinoyo.wpsassistant.spreadsheet.AbstractExcelServiceWithImage;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.IMultipartFile;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.ImageHandler;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.converter.TestConverter;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.entity.TestPO;
