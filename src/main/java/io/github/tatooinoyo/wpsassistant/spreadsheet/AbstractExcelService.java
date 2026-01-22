@@ -3,8 +3,10 @@ package io.github.tatooinoyo.wpsassistant.spreadsheet;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.ExcelWriter;
 import com.alibaba.excel.read.listener.PageReadListener;
+import com.alibaba.excel.write.builder.ExcelWriterBuilder;
 import com.alibaba.excel.write.metadata.WriteSheet;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.CellWriteUtil;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.SelectedSheetWriteHandler;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,7 +18,9 @@ import java.io.Serializable;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -60,6 +64,15 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
         return new ArrayList<>();
     }
 
+    /**
+     * 获取下拉框配置：Map<Excel属性名, 选项列表>
+     * 子类可重写此方法以提供动态下拉选项，Key 应对应 @ExcelProperty 中的 value 值
+     * @return 下拉配置映射
+     */
+    protected Map<String, List<String>> getDropdownOptions() {
+        return new HashMap<>();
+    }
+
     @Override
     public void downloadTemplate(HttpServletResponse response) {
         List<EI> importElements = generateTemplateData();
@@ -67,7 +80,16 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
         try {
             setExcelResponseHeaders(response, fileName);
             ServletOutputStream outputStream = response.getOutputStream();
-            EasyExcel.write(outputStream, getExcelImportClass()).sheet("sheet1").doWrite(importElements);
+            
+            ExcelWriterBuilder writerBuilder = EasyExcel.write(outputStream, getExcelImportClass());
+            
+            // 注册下拉框处理器
+            Map<String, List<String>> dropdownOptions = getDropdownOptions();
+            if (!dropdownOptions.isEmpty()) {
+                writerBuilder.registerWriteHandler(new SelectedSheetWriteHandler(dropdownOptions));
+            }
+            
+            writerBuilder.sheet("sheet1").doWrite(importElements);
             outputStream.flush();
             outputStream.close();
         } catch (IOException e) {
