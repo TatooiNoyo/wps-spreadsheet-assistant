@@ -13,8 +13,23 @@ import java.util.List;
  */
 public interface IService4Excel<T> {
 
+
+
+    /**
+     * 批量保存实体列表
+     *
+     * @param entityList 实体集合
+     * @return 保存是否成功
+     */
     boolean saveBatch(Collection<T> entityList);
 
+
+    /**
+     * 根据ID集合批量查询实体列表
+     *
+     * @param idList ID集合
+     * @return 实体列表
+     */
     List<T> listByIds(Collection<? extends Serializable> idList);
 
     /**
