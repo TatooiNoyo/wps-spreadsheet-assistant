@@ -41,8 +41,8 @@ public abstract class AbstractExcelServiceWithImage<S extends IService4Excel<T>,
                 if (custom instanceof Map customMap) {
                     imageMap = (Map<String, String>) customMap;
                 } else {
+                    log.info("初始化图片资源字典表");
                     imageMap = imageHandler.initCellImages(context);
-                    log.warn("未解析到XML资源中的图片内容");
                 }
 
                 for (EI e : dataList) {
