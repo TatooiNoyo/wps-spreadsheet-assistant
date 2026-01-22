@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,7 +27,7 @@ public class TestController {
 
     @GetMapping("/test/exportExcel")
     @Operation(summary = "导出excel表格")
-    public void exportExcel(HttpServletResponse response, List<String> ids) {
+    public void exportExcel(HttpServletResponse response, @RequestParam List<String> ids) {
         testExcelService.exportExcel(response, ids);
     }
 
