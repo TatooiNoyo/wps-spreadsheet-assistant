@@ -40,16 +40,33 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
      */
     abstract protected String getFilename();
 
+    /**
+     * 设置 Excel 文件下载的响应头
+     * @param response HTTP响应对象
+     * @param filename 文件名（不含扩展名）
+     */
+    protected void setExcelResponseHeaders(HttpServletResponse response, String filename) {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("utf-8");
+        response.setHeader("Content-Disposition", 
+            "attachment;filename*=utf-8'zh_cn'" + URLEncoder.encode(filename + ".xlsx", StandardCharsets.UTF_8));
+    }
+
+    /**
+     * 生成模板数据
+     * @return 模板数据列表，默认为空列表
+     */
+    protected List<EI> generateTemplateData() {
+        return new ArrayList<>();
+    }
+
     @Override
     public void downloadTemplate(HttpServletResponse response) {
-        List<EI> importElements = new ArrayList<>();
-        //开始输出流
+        List<EI> importElements = generateTemplateData();
         String fileName = getFilename();
         try {
+            setExcelResponseHeaders(response, fileName);
             ServletOutputStream outputStream = response.getOutputStream();
-            response.setContentType("multipart/form-data");
-            response.setCharacterEncoding("utf-8");
-            response.setHeader("Content-Disposition", "attachment;filename*=utf-8'zh_cn'" + URLEncoder.encode(fileName + ".xlsx", StandardCharsets.UTF_8));
             EasyExcel.write(outputStream, getExcelImportClass()).sheet("sheet1").doWrite(importElements);
             outputStream.flush();
             outputStream.close();
@@ -58,55 +75,47 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
         }
     }
 
+    /**
+     * 处理导入的Excel数据
+     * @param inputStream Excel文件输入流
+     * @return 导入的数据条数
+     */
+    protected int processImportData(InputStream inputStream) {
+        AtomicInteger count = new AtomicInteger();
+            
+        EasyExcel.read(inputStream, getExcelImportClass(), new PageReadListener<EI>(dataList -> {
+            List<T> pos = convertImportDataToPO(dataList);
+            service.saveBatch(pos);
+            count.addAndGet(dataList.size());
+        }, 500)).sheet().doRead();
+            
+        return count.intValue();
+    }
+    
+    /**
+     * 将导入的Excel元素转换为PO对象列表
+     * @param dataList Excel数据列表
+     * @return PO对象列表
+     */
+    protected List<T> convertImportDataToPO(List<EI> dataList) {
+        List<T> pos = new ArrayList<>();
+        for (EI e : dataList) {
+            T po = excelConverter.toPOFromExcelElement(e);
+            pos.add(po);
+        }
+        return pos;
+    }
+    
     @Override
     public boolean importExcel(HttpServletResponse response, IMultipartFile file) {
-        //文件判断
-        if (null == file) {
-            throw new RuntimeException("文件不能为空");
-        }
-        String extName = Optional.of(file).map(IMultipartFile::getOriginalFilename)
-                .map(filename -> filename.split("\\."))
-                .map(strArr -> {
-                    if (strArr.length > 1)
-                        return strArr[strArr.length - 1];
-                    else
-                        return "";
-                })
-                .orElse(null);
-        if (!"xls".equals(extName) && !"xlsx".equals(extName)) {
-            throw new RuntimeException("不支持的文件格式");
-        }
-
-        boolean isResult = true;
-
-
-        AtomicInteger count = new AtomicInteger();
-
-
-        try (InputStream forEasyExcel = file.getInputStream()) {
-            EasyExcel.read(forEasyExcel, getExcelImportClass(), new PageReadListener<EI>(dataList -> {
-                ArrayList<T> pos = new ArrayList<>();
-                for (EI e : dataList) {
-
-                    int num = count.getAndIncrement();
-                    T po = excelConverter.toPOFromExcelElement(e);
-                    pos.add(po);
-                    num++;
-                    count.set(num);
-
-                }
-                //插入数据库
-                service.saveBatch(pos);
-            }, 500)).sheet().doRead();
-            if (count.intValue() == 0) {
-                isResult = false;
-            }
+        prepareCheckFile(file);
+            
+        try (InputStream inputStream = file.getInputStream()) {
+            int importCount = processImportData(inputStream);
+            return importCount > 0;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("导入Excel失败", e);
         }
-
-
-        return isResult;
     }
 
     /**
@@ -131,24 +140,58 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
         }
     }
 
-    @Override
-    public void exportExcel(HttpServletResponse response, @Nonnull List<String> ids) {
-        List<EO> outputElements = service.listByIds(ids).stream()
+    /**
+     * 查询导出数据并转换为Excel输出对象
+     * @param ids 数据ID列表
+     * @return Excel输出对象列表
+     */
+    protected List<EO> queryExportData(List<String> ids) {
+        return service.listByIds(ids).stream()
                 .map(excelConverter::toExcelFromPO)
                 .toList();
-        //开始输出流
+    }
+
+    @Override
+    public void exportExcel(HttpServletResponse response, @Nonnull List<String> ids) {
+        List<EO> outputElements = queryExportData(ids);
         String fileName = getFilename();
         try {
+            setExcelResponseHeaders(response, fileName);
             ServletOutputStream outputStream = response.getOutputStream();
-            response.setContentType("multipart/form-data");
-            response.setCharacterEncoding("utf-8");
-            response.setHeader("Content-Disposition", "attachment;filename*=utf-8'zh_cn'" + URLEncoder.encode(fileName + ".xlsx", StandardCharsets.UTF_8));
-            EasyExcel.write(outputStream, getExcelOutputClass()).registerWriteHandler(new CellWriteUtil()).sheet("sheet1").doWrite(outputElements);
+            EasyExcel.write(outputStream, getExcelOutputClass())
+                    .registerWriteHandler(new CellWriteUtil())
+                    .sheet("sheet1")
+                    .doWrite(outputElements);
             outputStream.flush();
             outputStream.close();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("导出Excel失败", e);
         }
+    }
+
+    /**
+     * 执行流式导出的核心逻辑
+     * @param excelWriter Excel写入器
+     * @param writeSheet 写入的Sheet
+     * @param batchSize 批次大小
+     */
+    protected void executeLargeDataExport(ExcelWriter excelWriter, WriteSheet writeSheet, int batchSize) {
+        Serializable lastId = null;
+        List<T> dataList;
+
+        do {
+            dataList = service.listByIdCursor(lastId, batchSize);
+            if (dataList != null && !dataList.isEmpty()) {
+                List<EO> outputElements = dataList.stream()
+                        .map(excelConverter::toExcelFromPO)
+                        .toList();
+
+                excelWriter.write(outputElements, writeSheet);
+
+                T lastEntity = dataList.get(dataList.size() - 1);
+                lastId = service.getEntityId(lastEntity);
+            }
+        } while (dataList != null && dataList.size() == batchSize);
     }
 
     /**
@@ -162,7 +205,7 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
     @Override
     public void exportLargeData(HttpServletResponse response, int batchSize) {
         if (batchSize <= 0) {
-            batchSize = 500; // 默认每批次500条
+            batchSize = 500;
         }
 
         String fileName = getFilename();
@@ -170,43 +213,19 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
         ServletOutputStream outputStream = null;
 
         try {
+            setExcelResponseHeaders(response, fileName);
             outputStream = response.getOutputStream();
-            response.setContentType("multipart/form-data");
-            response.setCharacterEncoding("utf-8");
-            response.setHeader("Content-Disposition", "attachment;filename*=utf-8'zh_cn'" + URLEncoder.encode(fileName + ".xlsx", StandardCharsets.UTF_8));
 
-            // 创建ExcelWriter对象
             excelWriter = EasyExcel.write(outputStream, getExcelOutputClass())
                     .registerWriteHandler(new CellWriteUtil())
                     .build();
 
             WriteSheet writeSheet = EasyExcel.writerSheet("sheet1").build();
-
-            Serializable lastId = null; // 游标起始位null
-            List<T> dataList;
-
-            // 使用游标方式查询并写入Excel
-            do {
-                dataList = service.listByIdCursor(lastId, batchSize);
-                if (dataList != null && !dataList.isEmpty()) {
-                    // 将PO转换为Excel输出对象
-                    List<EO> outputElements = dataList.stream()
-                            .map(excelConverter::toExcelFromPO)
-                            .toList();
-
-                    // 写入当前批次数据
-                    excelWriter.write(outputElements, writeSheet);
-
-                    // 更新游标为当前批次最后一条记录的ID
-                    T lastEntity = dataList.get(dataList.size() - 1);
-                    lastId = service.getEntityId(lastEntity);
-                }
-            } while (dataList != null && dataList.size() == batchSize);
+            executeLargeDataExport(excelWriter, writeSheet, batchSize);
 
         } catch (IOException e) {
             throw new RuntimeException("导出Excel失败", e);
         } finally {
-            // 关闭资源
             if (excelWriter != null) {
                 excelWriter.finish();
             }
