@@ -32,12 +32,9 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
     
-    - name: Build with Maven
-      run: ./mvnw clean install -B
-      
-    - name: Publish to Maven Central Repository
+    - name: Deploy to Maven Central Repository
       run: |
-        ./mvnw deploy -DskipTests -P gpg --settings .github/workflows/settings.xml
+        ./mvnw clean deploy -DskipTests -P gpg --settings .github/workflows/settings.xml
       env:
         OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
