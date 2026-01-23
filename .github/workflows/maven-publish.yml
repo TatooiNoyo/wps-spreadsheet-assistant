@@ -1,0 +1,44 @@
+name: Publish package to Maven Central
+
+on:
+  push:
+    tags:
+      - 'v*' # 当推送以v开头的标签时触发
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Java for publishing to Maven Central Repository
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        server-id: central # 必须与pom.xml中的serverId匹配
+        server-username: ${{ secrets.OSSRH_USERNAME }} # 从secrets获取用户名
+        server-password: ${{ secrets.OSSRH_TOKEN }} # 从secrets获取密码
+        gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }} # 从secrets获取GPG私钥
+        gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }} # 从secrets获取GPG密码
+    
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+    
+    - name: Build with Maven
+      run: ./mvnw clean install -B
+      
+    - name: Publish to Maven Central Repository
+      run: |
+        ./mvnw deploy -DskipTests -P gpg --settings .github/workflows/settings.xml
+      env:
+        OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+        OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
