@@ -26,10 +26,19 @@ public class WPSReadListener<T> implements ReadListener<T> {
     private final BiConsumer<List<T>, AnalysisContext> consumer;
 
 
+    /**
+     * 构造函数
+     * @param consumer 数据消费函数
+     */
     public WPSReadListener(BiConsumer<List<T>, AnalysisContext> consumer) {
         this.consumer = consumer;
     }
 
+    /**
+     * 构造函数
+     * @param consumer 数据消费函数
+     * @param batchCount 批次大小
+     */
     public WPSReadListener(BiConsumer<List<T>, AnalysisContext> consumer, int batchCount) {
         this.batchCount = batchCount;
         this.consumer = consumer;

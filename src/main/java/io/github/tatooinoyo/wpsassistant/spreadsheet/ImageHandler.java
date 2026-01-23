@@ -36,9 +36,9 @@ public class ImageHandler {
     /**
      * 根据Wps中的Image函数表达式,以及映射表获取图片下载链接
      *
-     * @param imageMap
-     * @param imageFunExpression
-     * @return
+     * @param imageMap 图片映射表
+     * @param imageFunExpression 图片函数表达式
+     * @return 图片下载链接
      */
     public String wpsImageFunToDownloadUrl(Map<String, String> imageMap, String imageFunExpression) {
         // 从 =DISPIMG("ID_3D02D9E9702449EB810BF35A1263A5FA",1) 中提取ID_3D02D9E9702449EB810BF35A1263A5FA
@@ -182,6 +182,11 @@ public class ImageHandler {
         return imageMap;
     }
 
+    /**
+     * 从WPS电子表格中提取图片
+     * @param is 输入流
+     * @return 图片映射表
+     */
     public Map<String, String> extractImagesFromWPSSpreadsheet(InputStream is) {
         // imageId: ID_xxx
         HashMap<String, String> imageMap = new HashMap<>();

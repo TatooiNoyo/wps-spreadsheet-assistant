@@ -32,11 +32,25 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @RequiredArgsConstructor
 public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, EO> implements IExcelService {
+    /**
+     * 基础服务对象
+     */
     protected final S service;
+    /**
+     * Excel转换器
+     */
     protected final IExcelConverter<T, EI, EO> excelConverter;
 
+    /**
+     * 获取Excel导入类类型
+     * @return Excel导入类类型
+     */
     abstract protected Class<EI> getExcelImportClass();
 
+    /**
+     * 获取Excel输出类类型
+     * @return Excel输出类类型
+     */
     abstract protected Class<EO> getExcelOutputClass();
 
     /**
@@ -65,7 +79,7 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
     }
 
     /**
-     * 获取下拉框配置：Map<Excel属性名, 选项列表>
+     * 获取下拉框配置：Map&lt;Excel属性名, 选项列表&gt;
      * 子类可重写此方法以提供动态下拉选项，Key 应对应 @ExcelProperty 中的 value 值
      * @return 下拉配置映射
      */

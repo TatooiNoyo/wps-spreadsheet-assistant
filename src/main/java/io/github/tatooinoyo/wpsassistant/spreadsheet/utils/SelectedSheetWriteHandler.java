@@ -20,6 +20,10 @@ public class SelectedSheetWriteHandler implements SheetWriteHandler {
     private final Map<String, List<String>> dropdownOptions;
     private static final String HIDDEN_SHEET_NAME = "dictionary_hidden";
 
+    /**
+     * 构造函数
+     * @param dropdownOptions 下拉框选项映射
+     */
     public SelectedSheetWriteHandler(Map<String, List<String>> dropdownOptions) {
         this.dropdownOptions = dropdownOptions;
     }

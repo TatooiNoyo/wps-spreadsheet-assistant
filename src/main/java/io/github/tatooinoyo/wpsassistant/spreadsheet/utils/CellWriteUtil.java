@@ -12,10 +12,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 单元格写入工具类
+ */
 public class CellWriteUtil extends AbstractColumnWidthStyleStrategy {
     private static final int MAX_COLUMN_WIDTH = 255;
     private final Map<Integer, Map<Integer, Integer>> CACHE = new HashMap<>(8);
 
+    /**
+     * 构造函数
+     */
     public CellWriteUtil() {
     }
 
