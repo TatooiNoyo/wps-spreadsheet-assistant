@@ -6,6 +6,8 @@ import com.alibaba.excel.read.listener.PageReadListener;
 import com.alibaba.excel.write.builder.ExcelWriterBuilder;
 import com.alibaba.excel.write.metadata.WriteSheet;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.CellWriteUtil;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.ExcelDataValidator;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.RequiredFieldWriteHandler;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.SelectedSheetWriteHandler;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.ServletOutputStream;
@@ -79,11 +81,21 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
     }
 
     /**
-     * 获取下拉框配置：Map&lt;Excel属性名, 选项列表&gt;
+     * 获取下拉框配置：Map<Excel属性名, 选项列表>
      * 子类可重写此方法以提供动态下拉选项，Key 应对应 @ExcelProperty 中的 value 值
      * @return 下拉配置映射
      */
     protected Map<String, List<String>> getDropdownOptions() {
+        return new HashMap<>();
+    }
+
+    /**
+     * 获取必填字段配置：Map<Excel属性名, 是否必填>
+     * 子类可重写此方法以声明哪些字段是必填的
+     * 必填字段在下载模板时会显示黄色背景标识
+     * @return 必填字段配置映射
+     */
+    protected Map<String, Boolean> getRequiredFields() {
         return new HashMap<>();
     }
 
@@ -103,6 +115,12 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
                 writerBuilder.registerWriteHandler(new SelectedSheetWriteHandler(dropdownOptions));
             }
             
+            // 注册必填字段处理器
+            Map<String, Boolean> requiredFields = getRequiredFields();
+            if (!requiredFields.isEmpty()) {
+                writerBuilder.registerWriteHandler(new RequiredFieldWriteHandler(requiredFields));
+            }
+            
             writerBuilder.sheet("sheet1").doWrite(importElements);
             outputStream.flush();
             outputStream.close();
@@ -112,20 +130,71 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
     }
 
     /**
+     * 导入错误列表
+     */
+    protected List<ImportError> importErrors = new ArrayList<>();
+
+    /**
+     * 是否在导入时进行数据校验
+     * 子类可重写此方法以启用/禁用校验
+     * @return 是否启用校验，默认启用
+     */
+    protected boolean isValidateOnImport() {
+        return true;
+    }
+
+    /**
      * 处理导入的Excel数据
      * @param inputStream Excel文件输入流
      * @return 导入的数据条数
      */
     protected int processImportData(InputStream inputStream) {
         AtomicInteger count = new AtomicInteger();
-            
+        importErrors.clear();
+        
         EasyExcel.read(inputStream, getExcelImportClass(), new PageReadListener<EI>(dataList -> {
+            int startRow = count.get() + 1;
+            
+            // 数据校验
+            if (isValidateOnImport()) {
+                List<ImportError> errors = ExcelDataValidator.validateAll(dataList);
+                for (int i = 0; i < dataList.size(); i++) {
+                    int rowNum = startRow + i;
+                    for (ImportError error : errors) {
+                        if (error.getRowNumber() == rowNum) {
+                            importErrors.add(error);
+                        }
+                    }
+                }
+                
+                // 如果有校验错误，跳过保存
+                if (!errors.isEmpty()) {
+                    return;
+                }
+            }
+            
             List<T> pos = convertImportDataToPO(dataList);
             service.saveBatch(pos);
             count.addAndGet(dataList.size());
         }, 500)).sheet().doRead();
-            
+        
         return count.intValue();
+    }
+    
+    /**
+     * 获取导入过程中的错误列表
+     * @return 错误列表
+     */
+    public List<ImportError> getImportErrors() {
+        return new ArrayList<>(importErrors);
+    }
+    
+    /**
+     * 判断导入过程中是否有错误
+     * @return 是否有错误
+     */
+    public boolean hasImportErrors() {
+        return !importErrors.isEmpty();
     }
     
     /**
@@ -145,7 +214,7 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
     @Override
     public boolean importExcel(HttpServletResponse response, IMultipartFile file) {
         prepareCheckFile(file);
-            
+        
         try (InputStream inputStream = file.getInputStream()) {
             int importCount = processImportData(inputStream);
             return importCount > 0;

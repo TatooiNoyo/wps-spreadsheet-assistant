@@ -1,11 +1,13 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet;
 
 import com.alibaba.excel.EasyExcel;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.ExcelDataValidator;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,6 +37,25 @@ public abstract class AbstractExcelServiceWithImage<S extends IService4Excel<T>,
         try {
             EasyExcel.read(file.getInputStream(), getExcelImportClass(), new WPSReadListener<EI>((dataList, context) -> {
                 ArrayList<T> pos = new ArrayList<>();
+                int startRow = count.get() + 1;
+
+                // 数据校验
+                if (isValidateOnImport()) {
+                    List<ImportError> errors = ExcelDataValidator.validateAll(dataList);
+                    for (int i = 0; i < dataList.size(); i++) {
+                        int rowNum = startRow + i;
+                        for (ImportError error : errors) {
+                            if (error.getRowNumber() == rowNum) {
+                                importErrors.add(error);
+                            }
+                        }
+                    }
+
+                    // 如果有校验错误，跳过保存
+                    if (!errors.isEmpty()) {
+                        return;
+                    }
+                }
 
                 Object custom = context.getCustom();
                 Map<String, String> imageMap;
