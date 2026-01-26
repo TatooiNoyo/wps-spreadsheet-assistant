@@ -5,6 +5,7 @@ import io.github.tatooinoyo.wpsassistant.spreadsheet.IGetImages;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,6 +20,7 @@ public class TestImportExcel implements IGetImages {
     private String name;
     @Min(message = "不能小于18", value = 18)
     @Max(message = "不能大于24", value = 24)
+    @NotNull
     @ExcelProperty("年龄")
     private Integer age;
     @ExcelProperty("头像图片")

@@ -1,12 +1,15 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet.utils;
 
-import com.alibaba.excel.write.handler.SheetWriteHandler;
+import com.alibaba.excel.metadata.data.WriteCellData;
+import com.alibaba.excel.write.handler.CellWriteHandler;
+import com.alibaba.excel.write.handler.context.CellWriteHandlerContext;
 import com.alibaba.excel.write.metadata.holder.WriteSheetHolder;
 import com.alibaba.excel.write.metadata.holder.WriteWorkbookHolder;
+import com.alibaba.excel.write.metadata.style.WriteCellStyle;
+import com.alibaba.excel.write.metadata.style.WriteFont;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.util.CellRangeAddress;
 
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -17,7 +20,7 @@ import java.util.Set;
  * @author Tatooi Noyo
  * @since 1.3.0
  */
-public class RequiredFieldWriteHandler implements SheetWriteHandler {
+public class RequiredFieldWriteHandler implements CellWriteHandler {
 
     /**
      * 必填字段集合（Excel列名）
@@ -29,7 +32,7 @@ public class RequiredFieldWriteHandler implements SheetWriteHandler {
      * @param requiredFields 必填字段集合
      */
     public RequiredFieldWriteHandler(Set<String> requiredFields) {
-        this.requiredFields = requiredFields;
+        this.requiredFields = requiredFields != null ? requiredFields : new HashSet<>();
     }
 
     /**
@@ -37,67 +40,84 @@ public class RequiredFieldWriteHandler implements SheetWriteHandler {
      * @param requiredFields 必填字段Map（值为true表示必填）
      */
     public RequiredFieldWriteHandler(Map<String, Boolean> requiredFields) {
-        this.requiredFields = requiredFields.entrySet().stream()
+        this.requiredFields = requiredFields != null ?
+                requiredFields.entrySet().stream()
                 .filter(Map.Entry::getValue)
                 .map(Map.Entry::getKey)
-                .collect(java.util.stream.Collectors.toSet());
+                        .collect(java.util.stream.Collectors.toSet())
+                : new HashSet<>();
     }
 
     @Override
-    public void afterSheetCreate(WriteWorkbookHolder writeWorkbookHolder, WriteSheetHolder writeSheetHolder) {
-        Workbook workbook = writeWorkbookHolder.getWorkbook();
-        Sheet sheet = writeSheetHolder.getSheet();
-        
-        // 创建黄色背景样式
-        CellStyle requiredStyle = workbook.createCellStyle();
-        requiredStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
-        requiredStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        requiredStyle.setBorderTop(BorderStyle.THIN);
-        requiredStyle.setBorderBottom(BorderStyle.THIN);
-        requiredStyle.setBorderLeft(BorderStyle.THIN);
-        requiredStyle.setBorderRight(BorderStyle.THIN);
-        
-        // 获取表头行
-        Row headerRow = sheet.getRow(0);
-        if (headerRow == null) {
+    public void afterCellDispose(CellWriteHandlerContext context) {
+        // 只处理表头单元格
+        Boolean isHead = context.getHead();
+        if (isHead == null || !isHead) {
             return;
         }
-        
-        // 遍历表头单元格，找到必填字段并设置样式
-        for (int i = 0; i < headerRow.getLastCellNum(); i++) {
-            Cell cell = headerRow.getCell(i);
-            if (cell != null) {
-                String headerName = getCellStringValue(cell);
-                if (requiredFields.contains(headerName)) {
-                    // 设置表头单元格样式
-                    cell.setCellStyle(requiredStyle);
-                    
-                    // 整列设置背景色
-                    sheet.setColumnWidth(i, sheet.getColumnWidth(i) + 500);
-                }
-            }
+
+        // 获取表头名称
+        String headName = getHeadName(context);
+        if (headName == null || !requiredFields.contains(headName)) {
+            return;
         }
+
+        // 设置表头单元格样式
+        WriteCellData<?> cellData = context.getFirstCellData();
+        // 这里需要去cellData 获取样式
+        // 很重要的一个原因是 WriteCellStyle 和 dataFormatData绑定的 简单的说 比如你加了 DateTimeFormat
+        // ，已经将writeCellStyle里面的dataFormatData 改了 如果你自己new了一个WriteCellStyle，可能注解的样式就失效了
+        // 然后 getOrCreateStyle 用于返回一个样式，如果为空，则创建一个后返回
+        WriteCellStyle writeCellStyle = cellData.getOrCreateStyle();
+
+        WriteFont writeFont = new WriteFont();
+        writeFont.setColor(IndexedColors.RED.getIndex());
+        writeFont.setFontName("宋体");
+        writeFont.setBold(true);
+        writeFont.setFontHeightInPoints((short) 14);
+        writeCellStyle.setWriteFont(writeFont);
+
+        setupRequiredStyle(writeCellStyle);
     }
-    
+
     /**
-     * 获取单元格字符串值
-     * @param cell 单元格
-     * @return 字符串值
+     * 获取表头名称
+     * @param context 单元格写入上下文
+     * @return 表头名称
      */
-    private String getCellStringValue(Cell cell) {
-        if (cell == null) {
-            return "";
-        }
-        CellType cellType = cell.getCellType();
-        if (cellType == CellType.STRING) {
-            return cell.getStringCellValue();
-        } else if (cellType == CellType.NUMERIC) {
-            return String.valueOf(cell.getNumericCellValue());
-        } else if (cellType == CellType.BOOLEAN) {
-            return String.valueOf(cell.getBooleanCellValue());
-        } else if (cellType == CellType.FORMULA) {
+    private String getHeadName(CellWriteHandlerContext context) {
+        // 尝试从 cell 获取字符串值
+        Cell cell = context.getCell();
+        if (cell != null && cell.getCellType() == CellType.STRING) {
             return cell.getStringCellValue();
         }
-        return "";
+        return null;
+    }
+
+    /**
+     * 设置必填字段样式
+     *
+     * @param style 需要设置的单元格样式
+     */
+    private void setupRequiredStyle(WriteCellStyle style) {
+        style.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
+        style.setFillPatternType(FillPatternType.SOLID_FOREGROUND);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setHorizontalAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+
+    }
+
+    /**
+     * 在 sheet 创建后设置列宽
+     *
+     * @param writeWorkbookHolder 工作簿持有者
+     * @param writeSheetHolder    Sheet持有者
+     */
+    public void afterSheetCreate(WriteWorkbookHolder writeWorkbookHolder, WriteSheetHolder writeSheetHolder) {
+        // 可以在此方法中调整列宽
     }
 }

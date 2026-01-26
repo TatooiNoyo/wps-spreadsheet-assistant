@@ -2,6 +2,7 @@ package io.github.tatooinoyo.wpsassistant.spreadsheet;
 
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.ExcelWriter;
+import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.read.listener.PageReadListener;
 import com.alibaba.excel.write.builder.ExcelWriterBuilder;
 import com.alibaba.excel.write.metadata.WriteSheet;
@@ -12,18 +13,17 @@ import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.SelectedSheetWriteHan
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -93,10 +93,52 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
      * 获取必填字段配置：Map<Excel属性名, 是否必填>
      * 子类可重写此方法以声明哪些字段是必填的
      * 必填字段在下载模板时会显示黄色背景标识
+     * 默认会扫描EI类上的@NotBlank和@NotNull注解来确定必填字段
      * @return 必填字段配置映射
      */
     protected Map<String, Boolean> getRequiredFields() {
-        return new HashMap<>();
+        return getRequiredFieldsByAnnotations(getExcelImportClass());
+    }
+
+    /**
+     * 通过反射扫描EI类上的@NotBlank和@NotNull注解来获取必填字段配置
+     *
+     * @param eiClass EI类的Class对象
+     * @return 必填字段配置映射
+     */
+    protected Map<String, Boolean> getRequiredFieldsByAnnotations(Class<EI> eiClass) {
+        Map<String, Boolean> requiredFields = new HashMap<>();
+
+        Field[] fields = eiClass.getDeclaredFields();
+        for (Field field : fields) {
+            // 检查字段上是否有@NotBlank注解
+            if (field.isAnnotationPresent(NotBlank.class)) {
+                // 获取@ExcelProperty注解的值作为字段名
+                if (field.isAnnotationPresent(ExcelProperty.class)) {
+                    ExcelProperty excelProp = field.getAnnotation(ExcelProperty.class);
+                    String headName = excelProp.value().length > 0 ? excelProp.value()[0] : field.getName();
+                    requiredFields.put(headName, true);
+                } else {
+                    // 如果没有@ExcelProperty注解，则使用字段名
+                    requiredFields.put(field.getName(), true);
+                }
+            }
+            // 检查字段上是否有@NotNull注解
+            else if (field.isAnnotationPresent(NotNull.class)) {
+                // 获取@ExcelProperty注解的值作为字段名
+                if (field.isAnnotationPresent(ExcelProperty.class)) {
+                    ExcelProperty excelProp =
+                            field.getAnnotation(ExcelProperty.class);
+                    String headName = excelProp.value().length > 0 ? excelProp.value()[0] : field.getName();
+                    requiredFields.put(headName, true);
+                } else {
+                    // 如果没有@ExcelProperty注解，则使用字段名
+                    requiredFields.put(field.getName(), true);
+                }
+            }
+        }
+
+        return requiredFields;
     }
 
     @Override
@@ -114,8 +156,8 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
             if (!dropdownOptions.isEmpty()) {
                 writerBuilder.registerWriteHandler(new SelectedSheetWriteHandler(dropdownOptions));
             }
-            
-            // 注册必填字段处理器
+
+            // 注册必填字段处理器（只对必填字段应用样式）
             Map<String, Boolean> requiredFields = getRequiredFields();
             if (!requiredFields.isEmpty()) {
                 writerBuilder.registerWriteHandler(new RequiredFieldWriteHandler(requiredFields));
