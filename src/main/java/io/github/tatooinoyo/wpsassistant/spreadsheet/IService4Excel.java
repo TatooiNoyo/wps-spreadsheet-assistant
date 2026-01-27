@@ -1,5 +1,7 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet;
 
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.IService4ImportExcel;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,17 +13,9 @@ import java.util.List;
  * @author Tatooi Noyo
  * @since 1.0
  */
-public interface IService4Excel<T> {
+public interface IService4Excel<T> extends IService4ImportExcel<T> {
 
 
-
-    /**
-     * 批量保存实体列表
-     *
-     * @param entityList 实体集合
-     * @return 保存是否成功
-     */
-    boolean saveBatch(Collection<T> entityList);
 
 
     /**

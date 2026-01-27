@@ -6,6 +6,12 @@ import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.read.listener.PageReadListener;
 import com.alibaba.excel.write.builder.ExcelWriterBuilder;
 import com.alibaba.excel.write.metadata.WriteSheet;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportError;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportResult;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.ExcelImportRouter;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.LargeImportStrategy;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.MediumImportStrategy;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.SmallImportStrategy;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.CellWriteUtil;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.ExcelDataValidator;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.RequiredFieldWriteHandler;
@@ -34,6 +40,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @RequiredArgsConstructor
 public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, EO> implements IExcelService {
+
+    protected final ExcelImportRouter<T, EI> excelImportRouter;
+
     /**
      * 基础服务对象
      */
@@ -254,14 +263,12 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
     }
     
     @Override
-    public boolean importExcel(HttpServletResponse response, IMultipartFile file) {
-        prepareCheckFile(file);
-        
-        try (InputStream inputStream = file.getInputStream()) {
-            int importCount = processImportData(inputStream);
-            return importCount > 0;
+    public ImportResult importExcel(IMultipartFile file) {
+        try {
+            return excelImportRouter.route(file);
         } catch (IOException e) {
             throw new RuntimeException("导入Excel失败", e);
+
         }
     }
 

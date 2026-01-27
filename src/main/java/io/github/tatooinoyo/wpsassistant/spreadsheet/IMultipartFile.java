@@ -29,4 +29,10 @@ public interface IMultipartFile {
      * @throws IllegalStateException 非法状态异常
      */
     void transferTo(File dest) throws IOException, IllegalStateException;
+
+    /**
+     * @return 获取文件大小
+     */
+    long getSize();
+
 }

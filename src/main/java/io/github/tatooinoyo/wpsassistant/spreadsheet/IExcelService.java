@@ -1,5 +1,6 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet;
 
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportResult;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
@@ -17,12 +18,11 @@ public interface IExcelService {
 
     /**
      * 导入Excel文件
-     * @param response HTTP响应对象
      * @param file 模拟的文件
      * @return 是否导入成功
      * @throws RuntimeException 在导入中途出现问题时抛出
      */
-    boolean importExcel(HttpServletResponse response, IMultipartFile file);
+    ImportResult importExcel(IMultipartFile file);
 
     /**
      * 导出Excel文件

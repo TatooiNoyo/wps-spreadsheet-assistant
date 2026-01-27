@@ -31,4 +31,9 @@ public class MultipartFileAdaptor implements IMultipartFile {
     public void transferTo(File dest) throws IOException, IllegalStateException {
         file.transferTo(dest);
     }
+
+    @Override
+    public long getSize() {
+        return file.getSize();
+    }
 }

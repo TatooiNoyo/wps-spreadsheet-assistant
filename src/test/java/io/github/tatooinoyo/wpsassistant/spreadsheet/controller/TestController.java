@@ -2,6 +2,7 @@ package io.github.tatooinoyo.wpsassistant.spreadsheet.controller;
 
 import io.github.tatooinoyo.wpsassistant.spreadsheet.IExcelService;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.MultipartFileAdaptor;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -33,9 +34,9 @@ public class TestController {
 
     @PostMapping(value = "/test/importExcel", consumes = {"multipart/form-data"})
     @Operation(summary = "导入excel表格")
-    public boolean importExcel(HttpServletResponse response, @Validated MultipartFile file) {
+    public ImportResult importExcel(HttpServletResponse response, @Validated MultipartFile file) {
         MultipartFileAdaptor multipartFileAdaptor = new MultipartFileAdaptor(file);
-        return testExcelService.importExcel(response, multipartFileAdaptor);
+        return testExcelService.importExcel(multipartFileAdaptor);
     }
 
     @PostMapping("/test/downloadTemplate")

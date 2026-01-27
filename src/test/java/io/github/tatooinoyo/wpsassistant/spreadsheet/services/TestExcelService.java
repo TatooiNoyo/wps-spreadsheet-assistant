@@ -6,6 +6,7 @@ import io.github.tatooinoyo.wpsassistant.spreadsheet.converter.TestConverter;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.entity.TestPO;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.excel.TestExportExcel;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.excel.TestImportExcel;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.ExcelImportRouter;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,8 +19,8 @@ import java.util.Map;
  */
 @Service("testExcelService")
 public class TestExcelService extends AbstractExcelServiceWithImage<TestService, TestPO, TestImportExcel, TestExportExcel> {
-    public TestExcelService(TestService service, ImageHandler imageHandler) {
-        super(service, TestConverter.INSTANCE, imageHandler);
+    public TestExcelService(ExcelImportRouter<TestPO, TestImportExcel> excelImportRouter, TestService service, ImageHandler imageHandler) {
+        super(excelImportRouter, service, TestConverter.INSTANCE, imageHandler);
     }
 
     @Override

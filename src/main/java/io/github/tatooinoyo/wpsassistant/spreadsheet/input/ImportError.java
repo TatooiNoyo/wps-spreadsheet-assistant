@@ -1,4 +1,4 @@
-package io.github.tatooinoyo.wpsassistant.spreadsheet;
+package io.github.tatooinoyo.wpsassistant.spreadsheet.input;
 
 import lombok.Getter;
 import lombok.Setter;

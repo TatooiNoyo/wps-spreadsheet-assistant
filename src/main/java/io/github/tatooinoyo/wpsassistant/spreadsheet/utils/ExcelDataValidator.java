@@ -1,6 +1,6 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet.utils;
 
-import io.github.tatooinoyo.wpsassistant.spreadsheet.ImportError;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportError;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
