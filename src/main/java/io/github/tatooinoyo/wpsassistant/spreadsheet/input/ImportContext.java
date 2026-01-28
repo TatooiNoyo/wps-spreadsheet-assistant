@@ -25,7 +25,6 @@ public class ImportContext {
     private final boolean validationEnabled;
 
     /* ========= 执行期状态 ========= */
-    private int rowNum = 0;
     private int readCount; // Excel 读到的行数
     private int validCount; // 校验通过
     private int successCount; //  实际保存成功数
@@ -41,9 +40,6 @@ public class ImportContext {
 
     /* ========= 行为方法 ========= */
 
-    public void advanceRow(int count) {
-        rowNum += count;
-    }
 
     public void markTotal() {
         readCount++;

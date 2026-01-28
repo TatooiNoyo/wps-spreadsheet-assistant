@@ -44,6 +44,7 @@ public class ExcelImportRouter<T, EI> {
                 .taskId(null)
                 .allowPartial(importOptions.isAllowPartial())
                 .validationEnabled(importOptions.isValidationEnabled())
+                .maxErrors(1000)
                 .build();
     }
 

@@ -3,17 +3,12 @@ package io.github.tatooinoyo.wpsassistant.spreadsheet;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.ExcelWriter;
 import com.alibaba.excel.annotation.ExcelProperty;
-import com.alibaba.excel.read.listener.PageReadListener;
 import com.alibaba.excel.write.builder.ExcelWriterBuilder;
 import com.alibaba.excel.write.metadata.WriteSheet;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportError;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportResult;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.ExcelImportRouter;
-import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.LargeImportStrategy;
-import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.MediumImportStrategy;
-import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.SmallImportStrategy;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.CellWriteUtil;
-import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.ExcelDataValidator;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.RequiredFieldWriteHandler;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.SelectedSheetWriteHandler;
 import jakarta.annotation.Nonnull;
@@ -24,13 +19,11 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * （ 泛型：S 是 基础服务 对象，T 是实体 ）
@@ -192,74 +185,6 @@ public abstract class AbstractExcelService<S extends IService4Excel<T>, T, EI, E
      */
     protected boolean isValidateOnImport() {
         return true;
-    }
-
-    /**
-     * 处理导入的Excel数据
-     * @param inputStream Excel文件输入流
-     * @return 导入的数据条数
-     */
-    protected int processImportData(InputStream inputStream) {
-        AtomicInteger count = new AtomicInteger();
-        importErrors.clear();
-        
-        EasyExcel.read(inputStream, getExcelImportClass(), new PageReadListener<EI>(dataList -> {
-            int startRow = count.get() + 1;
-            
-            // 数据校验
-            if (isValidateOnImport()) {
-                List<ImportError> errors = ExcelDataValidator.validateAll(dataList);
-                for (int i = 0; i < dataList.size(); i++) {
-                    int rowNum = startRow + i;
-                    for (ImportError error : errors) {
-                        if (error.getRowNumber() == rowNum) {
-                            importErrors.add(error);
-                        }
-                    }
-                }
-                
-                // 如果有校验错误，跳过保存
-                if (!errors.isEmpty()) {
-                    return;
-                }
-            }
-            
-            List<T> pos = convertImportDataToPO(dataList);
-            service.saveBatch(pos);
-            count.addAndGet(dataList.size());
-        }, 500)).sheet().doRead();
-        
-        return count.intValue();
-    }
-    
-    /**
-     * 获取导入过程中的错误列表
-     * @return 错误列表
-     */
-    public List<ImportError> getImportErrors() {
-        return new ArrayList<>(importErrors);
-    }
-    
-    /**
-     * 判断导入过程中是否有错误
-     * @return 是否有错误
-     */
-    public boolean hasImportErrors() {
-        return !importErrors.isEmpty();
-    }
-    
-    /**
-     * 将导入的Excel元素转换为PO对象列表
-     * @param dataList Excel数据列表
-     * @return PO对象列表
-     */
-    protected List<T> convertImportDataToPO(List<EI> dataList) {
-        List<T> pos = new ArrayList<>();
-        for (EI e : dataList) {
-            T po = excelConverter.toPOFromExcelElement(e);
-            pos.add(po);
-        }
-        return pos;
     }
     
     @Override

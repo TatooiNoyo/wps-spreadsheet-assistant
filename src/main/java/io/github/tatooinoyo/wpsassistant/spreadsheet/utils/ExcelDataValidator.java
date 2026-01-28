@@ -1,6 +1,7 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet.utils;
 
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportError;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.RowWrapper;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -39,6 +40,7 @@ public class ExcelDataValidator {
             error.setRowNumber(rowNumber);
             error.setFieldName(violation.getPropertyPath().toString());
             error.setErrorMessage(violation.getMessage());
+            error.setOriginalValue(violation.getInvalidValue());
             errors.add(error);
         }
         
@@ -79,14 +81,14 @@ public class ExcelDataValidator {
      * @param objects 待校验对象列表
      * @return 错误列表（按行号排序）
      */
-    public static <T> List<ImportError> validateAll(List<T> objects) {
+    public static <T> List<ImportError> validateAll(List<RowWrapper<T>> objects) {
         List<ImportError> allErrors = new ArrayList<>();
         
-        for (int i = 0; i < objects.size(); i++) {
-            List<ImportError> errors = validate(objects.get(i), i + 1); // 行号从1开始
+        for (RowWrapper<T> rowWrapper : objects) {
+            List<ImportError> errors = validate(rowWrapper.getData(), rowWrapper.getRowNum()); // 行号从1开始
             allErrors.addAll(errors);
         }
-        
+
         return allErrors;
     }
 

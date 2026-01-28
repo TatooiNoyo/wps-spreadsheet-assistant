@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * @author Tatooi Noyo
+ * @since v1.3
  */
 @Component
 @RequiredArgsConstructor
@@ -23,9 +24,9 @@ public class TestExcelImportRouter {
     @Bean
     public ExcelImportRouter<TestPO, TestImportExcel> make() {
         SmallImportStrategy<TestPO, TestImportExcel> smallImportStrategy = new SmallImportStrategy<>(TestConverter.INSTANCE,
-                testService, TestImportExcel.class, true
+                testService, TestImportExcel.class
         );
-        ImportOptions importOptions = ImportOptions.builder().allowPartial(true).build();
+        ImportOptions importOptions = ImportOptions.builder().allowPartial(true).validationEnabled(true).build();
         return new ExcelImportRouter<>(smallImportStrategy, new MediumImportStrategy(), new LargeImportStrategy(), importOptions);
     }
 }

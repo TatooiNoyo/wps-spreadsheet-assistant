@@ -1,7 +1,7 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy;
 
 import com.alibaba.excel.EasyExcel;
-import com.alibaba.excel.read.listener.PageReadListener;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.WPSReadListener;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.*;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.exception.ImportAbortException;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.ExcelDataValidator;
@@ -40,7 +40,7 @@ public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
      * @param importContext 上下文
      */
     protected void processImportData(InputStream inputStream, ImportContext importContext) {
-        EasyExcel.read(inputStream, excelImportClass, new PageReadListener<EI>(dataList -> {
+        EasyExcel.read(inputStream, excelImportClass, new WPSReadListener<EI>((dataList, context) -> {
             List<EI> validDataList = new ArrayList<>();
 
             // 数据校验
@@ -48,10 +48,10 @@ public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
                 List<ImportError> errors = ExcelDataValidator.validateAll(dataList);
                 Map<Integer, List<ImportError>> errorMap = errors.stream()
                         .collect(Collectors.groupingBy(ImportError::getRowNumber));
-                for (EI ei : dataList) {
+                for (RowWrapper<EI> eiRowWrapper : dataList) {
                     // 更正当前行数
-                    importContext.advanceRow(1);
-                    int rowNum = importContext.getRowNum();
+                    int rowNum = eiRowWrapper.getRowNum();
+                    EI ei = eiRowWrapper.getData();
 
                     // 计数: 总数
                     importContext.markTotal();
@@ -73,7 +73,7 @@ public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
                 }
             } else {
                 // 未开启校验, 则认定导入 Excel 的全部数据为有效数据
-                validDataList.addAll(dataList);
+                dataList.forEach(data -> validDataList.add(data.getData()));
             }
 
             // 计数: 校验通过数
