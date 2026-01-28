@@ -1,9 +1,12 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet.services;
 
+import io.github.tatooinoyo.wpsassistant.spreadsheet.ImageHandler;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.converter.TestConverter;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.entity.TestPO;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.excel.TestImportExcel;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportOptions;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.process.ImageImportProcess;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.process.ImportProcess;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.ExcelImportRouter;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.LargeImportStrategy;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.MediumImportStrategy;
@@ -11,6 +14,8 @@ import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.SmallImportS
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
 
 /**
  * @author Tatooi Noyo
@@ -20,11 +25,17 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TestExcelImportRouter {
     private final TestService testService;
+    private final ImageHandler imageHandler;
 
     @Bean
     public ExcelImportRouter<TestPO, TestImportExcel> make() {
-        SmallImportStrategy<TestPO, TestImportExcel> smallImportStrategy = new SmallImportStrategy<>(TestConverter.INSTANCE,
-                testService, TestImportExcel.class
+        ArrayList<ImportProcess<TestPO, TestImportExcel>> importProcesses = new ArrayList<>();
+        importProcesses.add(new ImageImportProcess<>(imageHandler));
+        SmallImportStrategy<TestPO, TestImportExcel> smallImportStrategy =
+                new SmallImportStrategy<>(TestConverter.INSTANCE,
+                        testService,
+                        TestImportExcel.class, importProcesses
+
         );
         ImportOptions importOptions = ImportOptions.builder().allowPartial(true).validationEnabled(true).build();
         return new ExcelImportRouter<>(smallImportStrategy, new MediumImportStrategy(), new LargeImportStrategy(), importOptions);

@@ -1,9 +1,11 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy;
 
 import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.context.AnalysisContext;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.WPSReadListener;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.*;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.exception.ImportAbortException;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.process.ImportProcess;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.ExcelDataValidator;
 import lombok.RequiredArgsConstructor;
 
@@ -24,7 +26,8 @@ public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
     private final ImportExcelConverter<T, EI> importExcelConverter;
     private final IService4ImportExcel<T> service;
     private final Class<EI> excelImportClass;
-
+    // EI to T 中间的过程处理
+    private final List<ImportProcess<T, EI>> processes;
 
     @Override
     public ImportResult importExcel(InputStream in, ImportContext context) {
@@ -80,7 +83,7 @@ public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
             importContext.markValid(validDataList.size());
             if (!validDataList.isEmpty()) {
                 // 空集合防御
-                List<T> pos = convertImportDataToPO(validDataList);
+                List<T> pos = convertImportDataToPO(validDataList, context);
                 // 失败时, 都导入不成功
                 if (service.saveBatch(pos)) {
                     // 计数: 成功数
@@ -99,12 +102,18 @@ public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
      * 将导入的Excel元素转换为PO对象列表
      *
      * @param dataList Excel数据列表
+     * @param context
      * @return PO对象列表
      */
-    protected List<T> convertImportDataToPO(List<EI> dataList) {
+    protected List<T> convertImportDataToPO(List<EI> dataList, AnalysisContext context) {
         List<T> pos = new ArrayList<>();
-        for (EI e : dataList) {
-            T po = importExcelConverter.toPOFromExcelElement(e);
+        for (EI row : dataList) {
+            T po = importExcelConverter.toPOFromExcelElement(row);
+
+            for (ImportProcess<T, EI> process : processes) {
+                process.process(row, po, context);
+            }
+
             pos.add(po);
         }
         return pos;
