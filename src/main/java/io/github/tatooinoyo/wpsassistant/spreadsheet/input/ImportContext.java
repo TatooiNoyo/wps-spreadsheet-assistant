@@ -49,12 +49,19 @@ public class ImportContext {
         readCount++;
     }
 
+    public void markValid(int count) {
+        validCount += count;
+    }
     public void markSuccess(int count) {
         successCount += count;
     }
 
     public void markFail() {
         failCount++;
+    }
+
+    public void markFail(int count) {
+        failCount += count;
     }
 
 

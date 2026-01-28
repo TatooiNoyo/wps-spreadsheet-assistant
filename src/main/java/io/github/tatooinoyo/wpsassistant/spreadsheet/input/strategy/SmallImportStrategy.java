@@ -82,13 +82,20 @@ public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
                 validDataList.addAll(dataList);
             }
 
-            // 计数: 成功数
-            importContext.markSuccess(validDataList.size());
-
+            // 计数: 校验通过数
+            importContext.markValid(validDataList.size());
             if (!validDataList.isEmpty()) {
                 // 空集合防御
                 List<T> pos = convertImportDataToPO(validDataList);
-                service.saveBatch(pos);
+                // 失败时, 都导入不成功
+                if (service.saveBatch(pos)) {
+                    // 计数: 成功数
+                    importContext.markSuccess(validDataList.size());
+                } else {
+                    // 计数: 失败数
+                    importContext.markFail(validDataList.size());
+                }
+
             }
 
         }, 500)).sheet().doRead();
