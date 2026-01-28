@@ -5,7 +5,7 @@ import lombok.Setter;
 
 /**
  * @author Tatooi Noyo
- * @since 2026/1/20 16:02
+ * @since v1.3
  */
 @Setter
 @Getter

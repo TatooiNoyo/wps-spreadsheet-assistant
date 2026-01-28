@@ -4,7 +4,7 @@ import java.util.Collection;
 
 /**
  * @author Tatooi Noyo
- * @since 2026/1/27 10:35
+ * @since v1.3
  */
 public interface IService4ImportExcel<T> {
     /**

@@ -2,7 +2,7 @@ package io.github.tatooinoyo.wpsassistant.spreadsheet.input;
 
 /**
  * @author Tatooi Noyo
- * @since 2026/1/27 10:28
+ * @since v1.3
  */
 public interface ImportExcelConverter<T,EI> {
     /**
