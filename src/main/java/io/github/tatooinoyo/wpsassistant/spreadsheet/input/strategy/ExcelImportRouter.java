@@ -8,6 +8,7 @@ import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportResult;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * 同一结构的Excel导入, 对应一个router实例
@@ -32,7 +33,9 @@ public class ExcelImportRouter<T, EI> {
             case LARGE -> largeImportStrategy;
         };
 
-        return strategy.importExcel(file.getInputStream(), buildContext());
+        try (InputStream in = file.getInputStream()) {
+            return strategy.importExcel(in, buildContext());
+        }
     }
 
     public ImportContext buildContext() {

@@ -7,7 +7,6 @@ import io.github.tatooinoyo.wpsassistant.spreadsheet.input.exception.ImportAbort
 import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.ExcelDataValidator;
 import lombok.RequiredArgsConstructor;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,16 +24,11 @@ public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
     private final ImportExcelConverter<T, EI> importExcelConverter;
     private final IService4ImportExcel<T> service;
     private final Class<EI> excelImportClass;
-    private final boolean validationEnabled;
 
 
     @Override
     public ImportResult importExcel(InputStream in, ImportContext context) {
-        try (InputStream inputStream = in) {
-            processImportData(inputStream, context);
-        } catch (IOException e) {
-            throw new RuntimeException("导入Excel失败", e);
-        }
+        processImportData(in, context);
         return context.toResult();
     }
 
@@ -50,7 +44,7 @@ public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
             List<EI> validDataList = new ArrayList<>();
 
             // 数据校验
-            if (validationEnabled) {
+            if (importContext.isValidationEnabled()) {
                 List<ImportError> errors = ExcelDataValidator.validateAll(dataList);
                 Map<Integer, List<ImportError>> errorMap = errors.stream()
                         .collect(Collectors.groupingBy(ImportError::getRowNumber));
