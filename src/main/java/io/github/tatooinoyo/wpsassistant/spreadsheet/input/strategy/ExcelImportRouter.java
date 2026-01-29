@@ -18,11 +18,22 @@ import java.io.InputStream;
  */
 @RequiredArgsConstructor
 public class ExcelImportRouter<T, EI> {
+    /** 小数据量导入策略 */
     private final SmallImportStrategy<T, EI> smallImportStrategy;
+    /** 中等数据量导入策略 */
     private final MediumImportStrategy mediumImportStrategy;
+    /** 大数据量导入策略 */
     private final LargeImportStrategy largeImportStrategy;
+    /** 导入选项 */
     private final ImportOptions importOptions;
 
+    /**
+     * 根据文件自动路由到合适的导入策略
+     *
+     * @param file 上传的 Excel 文件
+     * @return 导入结果
+     * @throws IOException 文件读取异常
+     */
     public ImportResult route(IMultipartFile file) throws IOException {
 
         ImportLevel level = detectLevel(file);
@@ -38,6 +49,11 @@ public class ExcelImportRouter<T, EI> {
         }
     }
 
+    /**
+     * 构建导入上下文
+     *
+     * @return 导入上下文
+     */
     public ImportContext buildContext() {
 
         return ImportContext.builder()
@@ -49,6 +65,12 @@ public class ExcelImportRouter<T, EI> {
     }
 
 
+    /**
+     * 根据文件大小检测导入级别
+     *
+     * @param file 上传的 Excel 文件
+     * @return 导入级别
+     */
     private ImportLevel detectLevel(IMultipartFile file) {
 
         long size = file.getSize(); // bytes

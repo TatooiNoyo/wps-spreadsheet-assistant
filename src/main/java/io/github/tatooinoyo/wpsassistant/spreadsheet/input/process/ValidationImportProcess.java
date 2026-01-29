@@ -11,6 +11,13 @@ import jakarta.annotation.Nullable;
 import java.util.List;
 
 /**
+ * 校验导入处理器
+ *
+ * <p>使用 Jakarta Validation 注解对导入数据进行校验，</p>
+ * <p>如果校验失败则记录错误信息并中止该行处理</p>
+ *
+ * @param <T>  PO 类型
+ * @param <EI> Excel 输入数据类型
  * @author Tatooi Noyo
  * @since v1.3
  */

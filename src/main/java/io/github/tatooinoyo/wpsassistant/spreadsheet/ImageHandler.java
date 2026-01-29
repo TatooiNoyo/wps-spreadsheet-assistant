@@ -24,12 +24,18 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * @author Tatooi Noyo
+ * WPS 图片处理器
+ *
+ * <p>负责处理 WPS Excel 中的单元格图片，解析 DISPIMG 函数表达式，</p>
+ * <p>提取并上传图片到存储服务，返回下载链接</p>
+ *
+ * @author Tato Noyo
  * @since 1.0
  */
 @Slf4j
 @RequiredArgsConstructor
 public class ImageHandler {
+    /** 存储服务 */
     private final IStorageService storageService;
 
 
@@ -228,4 +234,3 @@ public class ImageHandler {
         return imageMap;
     }
 }
-

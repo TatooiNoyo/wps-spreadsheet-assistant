@@ -12,9 +12,9 @@ import lombok.Getter;
 @Getter
 @Builder
 public class ImportOptions {
-    // 是否校验数据
+    /** 是否校验数据，默认为 true */
     private boolean validationEnabled = true;
-    // 是否允许部分保存
+    /** 是否允许部分保存，默认为 true */
     private boolean allowPartial = true;
 
 }

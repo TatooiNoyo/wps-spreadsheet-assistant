@@ -21,9 +21,11 @@ import java.util.List;
  */
 @RequiredArgsConstructor
 public class LargeImportStrategy<T, EI> implements ExcelImportStrategy {
+    /** 导入服务 */
     private final IService4ImportExcel<T> service;
+    /** Excel 数据类型 */
     private final Class<EI> excelImportClass;
-    // EI to T 中间的过程处理
+    /** EI to T 中间的过程处理器列表 */
     private final List<ImportProcess<T, EI>> processes;
 
     @Override

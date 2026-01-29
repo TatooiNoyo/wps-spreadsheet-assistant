@@ -10,21 +10,23 @@ import java.util.List;
 import java.util.function.BiConsumer;
 
 /**
+ * WPS Excel 读取监听器
+ *
+ * <p>EasyExcel 的 ReadListener 实现，用于分批处理 Excel 数据</p>
+ *
+ * @param <T> Excel 行数据类型
  * @author Tatooi Noyo
  * @since v1.2
  */
 public class WPSReadListener<T> implements ReadListener<T> {
-    /**
-     * Default single handle the amount of data
-     */
+    /** 默认每批处理的数据量 */
     public static int BATCH_COUNT = 100;
-    /**
-     * Temporary storage of data
-     */
+    /** 临时存储的数据缓存 */
     private List<RowWrapper<T>> cachedDataList = ListUtils.newArrayListWithExpectedSize(BATCH_COUNT);
 
     private int batchCount = BATCH_COUNT;
 
+    /** 数据消费函数 */
     private final BiConsumer<List<RowWrapper<T>>, AnalysisContext> consumer;
 
 
