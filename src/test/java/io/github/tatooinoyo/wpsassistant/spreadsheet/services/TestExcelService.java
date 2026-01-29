@@ -7,6 +7,9 @@ import io.github.tatooinoyo.wpsassistant.spreadsheet.entity.TestPO;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.excel.TestExportExcel;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.excel.TestImportExcel;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.ExcelImportRouter;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy.ImportRouterFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,10 +21,31 @@ import java.util.Map;
  * @author Tatooi Noyo
  */
 @Service("testExcelService")
+@Slf4j
 public class TestExcelService extends AbstractExcelService<TestService, TestPO, TestImportExcel, TestExportExcel> {
-    public TestExcelService(ExcelImportRouter<TestPO, TestImportExcel> excelImportRouter, TestService service, ImageHandler imageHandler) {
-        super(excelImportRouter, service, TestConverter.INSTANCE);
-        // 图片处理通过 ImportRouterFactory.imageHandler() 配置
+
+    private final TestService testService;
+    private final ImageHandler imageHandler;
+
+    @Autowired
+    public TestExcelService(TestService testService, ImageHandler imageHandler) {
+        super(createRouter(testService, imageHandler), testService, TestConverter.INSTANCE);
+        this.testService = testService;
+        this.imageHandler = imageHandler;
+    }
+
+    /**
+     * 创建 ExcelImportRouter
+     */
+    private static ExcelImportRouter<TestPO, TestImportExcel> createRouter(TestService testService, ImageHandler imageHandler) {
+        log.info("创建 TestExcelService 的 ExcelImportRouter");
+        return ImportRouterFactory.<TestPO, TestImportExcel>builder()
+                .service(testService)
+                .excelClass(TestImportExcel.class)
+                .converter(TestConverter.INSTANCE)
+                .imageHandler(imageHandler)
+                .build()
+                .toRouter();
     }
 
     @Override
