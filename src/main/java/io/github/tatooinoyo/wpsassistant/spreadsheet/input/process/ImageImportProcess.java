@@ -21,7 +21,7 @@ import java.util.Map;
  * @since v1.3
  */
 @Slf4j
-public class ImageImportProcess<T extends ISetImages, EI extends IGetImages> implements ImportProcess<T, EI> {
+public class ImageImportProcess<T, EI> implements ImportProcess<T, EI> {
     /** 图片处理器 */
     protected final ImageHandler imageHandler;
 
@@ -42,6 +42,24 @@ public class ImageImportProcess<T extends ISetImages, EI extends IGetImages> imp
             context.abort();
             return null;
         }
+
+        // 图片处理, 导入的记录 和 实体类应该是IGetImages和ISetImages的超集
+        ISetImages setImageObj;
+        IGetImages getImageObj;
+        if (po instanceof ISetImages) {
+            setImageObj = (ISetImages) po;
+        } else {
+            log.error("图片处理的实体必须是 ISetImages 的超集!");
+            context.abort();
+            return null;
+        }
+        if (row.getData() instanceof IGetImages) {
+            getImageObj = (IGetImages) row.getData();
+        } else {
+            log.error("图片处理流程的Excel记录必须是 IGetImages 的超集!");
+            context.abort();
+            return null;
+        }
         // 获取或收集图片关系字典
         AnalysisContext ctx = context.getAnalysisContext();
         Object custom = ctx.getCustom();
@@ -52,8 +70,8 @@ public class ImageImportProcess<T extends ISetImages, EI extends IGetImages> imp
             imageMap = imageHandler.initCellImages(ctx);
         }
         // 将图片通过 imageHandler 对象存放并返回相关链接
-        String downloadUrl = imageHandler.wpsImageFunToDownloadUrl(imageMap, row.getData().getImage());
-        po.setImage(downloadUrl);
+        String downloadUrl = imageHandler.wpsImageFunToDownloadUrl(imageMap, getImageObj.getImage());
+        setImageObj.setImage(downloadUrl);
         return po;
     }
 
