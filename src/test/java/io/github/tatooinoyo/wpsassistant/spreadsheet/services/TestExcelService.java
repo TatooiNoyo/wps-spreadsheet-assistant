@@ -1,6 +1,6 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet.services;
 
-import io.github.tatooinoyo.wpsassistant.spreadsheet.AbstractExcelServiceWithImage;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.AbstractExcelService;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.ImageHandler;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.converter.TestConverter;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.entity.TestPO;
@@ -18,9 +18,10 @@ import java.util.Map;
  * @author Tatooi Noyo
  */
 @Service("testExcelService")
-public class TestExcelService extends AbstractExcelServiceWithImage<TestService, TestPO, TestImportExcel, TestExportExcel> {
+public class TestExcelService extends AbstractExcelService<TestService, TestPO, TestImportExcel, TestExportExcel> {
     public TestExcelService(ExcelImportRouter<TestPO, TestImportExcel> excelImportRouter, TestService service, ImageHandler imageHandler) {
-        super(excelImportRouter, service, TestConverter.INSTANCE, imageHandler);
+        super(excelImportRouter, service, TestConverter.INSTANCE);
+        // 图片处理通过 ImportRouterFactory.imageHandler() 配置
     }
 
     @Override
