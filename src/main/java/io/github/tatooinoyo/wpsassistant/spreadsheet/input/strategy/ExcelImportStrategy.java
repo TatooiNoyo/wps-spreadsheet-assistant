@@ -10,5 +10,5 @@ import java.io.InputStream;
  * @since v1.3
  */
 public interface ExcelImportStrategy {
-    ImportResult importExcel(InputStream in, ImportContext context);
+    ImportResult importExcel(InputStream in, ImportContext context) throws RuntimeException;
 }

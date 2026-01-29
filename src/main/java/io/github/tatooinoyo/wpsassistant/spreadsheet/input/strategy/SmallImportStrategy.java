@@ -1,19 +1,17 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet.input.strategy;
 
 import com.alibaba.excel.EasyExcel;
-import com.alibaba.excel.context.AnalysisContext;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.WPSReadListener;
-import io.github.tatooinoyo.wpsassistant.spreadsheet.input.*;
-import io.github.tatooinoyo.wpsassistant.spreadsheet.input.exception.ImportAbortException;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.IService4ImportExcel;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportContext;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.ImportResult;
+import io.github.tatooinoyo.wpsassistant.spreadsheet.input.RowWrapper;
 import io.github.tatooinoyo.wpsassistant.spreadsheet.input.process.ImportProcess;
-import io.github.tatooinoyo.wpsassistant.spreadsheet.utils.ExcelDataValidator;
 import lombok.RequiredArgsConstructor;
 
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 小数据策略（≤ 1k）
@@ -23,14 +21,13 @@ import java.util.stream.Collectors;
  */
 @RequiredArgsConstructor
 public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
-    private final ImportExcelConverter<T, EI> importExcelConverter;
     private final IService4ImportExcel<T> service;
     private final Class<EI> excelImportClass;
     // EI to T 中间的过程处理
     private final List<ImportProcess<T, EI>> processes;
 
     @Override
-    public ImportResult importExcel(InputStream in, ImportContext context) {
+    public ImportResult importExcel(InputStream in, ImportContext context) throws RuntimeException {
         processImportData(in, context);
         return context.toResult();
     }
@@ -39,83 +36,39 @@ public class SmallImportStrategy<T, EI> implements ExcelImportStrategy {
     /**
      * 处理导入的Excel数据
      *
-     * @param inputStream   Excel文件输入流
+     * @param inputStream   Excel 文件输入流
      * @param importContext 上下文
      */
     protected void processImportData(InputStream inputStream, ImportContext importContext) {
         EasyExcel.read(inputStream, excelImportClass, new WPSReadListener<EI>((dataList, context) -> {
-            List<EI> validDataList = new ArrayList<>();
+            importContext.setAnalysisContext(context);
+            List<T> batchPos = new ArrayList<>();
 
-            // 数据校验
-            if (importContext.isValidationEnabled()) {
-                List<ImportError> errors = ExcelDataValidator.validateAll(dataList);
-                Map<Integer, List<ImportError>> errorMap = errors.stream()
-                        .collect(Collectors.groupingBy(ImportError::getRowNumber));
-                for (RowWrapper<EI> eiRowWrapper : dataList) {
-                    // 更正当前行数
-                    int rowNum = eiRowWrapper.getRowNum();
-                    EI ei = eiRowWrapper.getData();
+            for (RowWrapper<EI> eiRowWrapper : dataList) {
+                // 计数: 总数
+                importContext.markTotal();
+                importContext.resetRowAborted();
 
-                    // 计数: 总数
-                    importContext.markTotal();
-
-                    List<ImportError> rowErrors = errorMap.get(rowNum);
-
-                    if (rowErrors != null) {
-                        // 如果该行记录有错误
-                        importContext.addErrors(rowNum, rowErrors);
-                        // 计数: 失败数
-                        importContext.markFail();
-                        if (!importContext.isAllowPartial()) {
-                            throw new ImportAbortException("Validation failed at row " + rowNum);
-                        }
-                        continue;
-                    }
-
-                    validDataList.add(ei);
+                T po = null;
+                for (ImportProcess<T, EI> process : processes) {
+                    po = process.process(eiRowWrapper, po, importContext);
+                    if (importContext.isRowAborted()) break; // 如果该条记录被放弃
                 }
-            } else {
-                // 未开启校验, 则认定导入 Excel 的全部数据为有效数据
-                dataList.forEach(data -> validDataList.add(data.getData()));
+                if (po != null) {
+                    // importContext.isRowAborted() 为 true, 代表被抛弃,不需要保存.
+                    // 但如果被抛弃, po数据会是null, 故减少冗余判断 importContext.isRowAborted()
+                    batchPos.add(po);
+                }
             }
 
-            // 计数: 校验通过数
-            importContext.markValid(validDataList.size());
-            if (!validDataList.isEmpty()) {
-                // 空集合防御
-                List<T> pos = convertImportDataToPO(validDataList, context);
-                // 失败时, 都导入不成功
-                if (service.saveBatch(pos)) {
-                    // 计数: 成功数
-                    importContext.markSuccess(validDataList.size());
-                } else {
-                    // 计数: 失败数
-                    importContext.markFail(validDataList.size());
-                }
-
+            if (service.saveBatch(batchPos)) {
+                // 计数: 成功数
+                importContext.markSuccess(batchPos.size());
+            } else {
+                // 计数: 失败数
+                importContext.markFail(batchPos.size());
             }
 
         }, 500)).sheet().doRead();
-    }
-
-    /**
-     * 将导入的Excel元素转换为PO对象列表
-     *
-     * @param dataList Excel数据列表
-     * @param context
-     * @return PO对象列表
-     */
-    protected List<T> convertImportDataToPO(List<EI> dataList, AnalysisContext context) {
-        List<T> pos = new ArrayList<>();
-        for (EI row : dataList) {
-            T po = importExcelConverter.toPOFromExcelElement(row);
-
-            for (ImportProcess<T, EI> process : processes) {
-                process.process(row, po, context);
-            }
-
-            pos.add(po);
-        }
-        return pos;
     }
 }

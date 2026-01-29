@@ -14,7 +14,7 @@ import java.util.List;
 public class TestServiceImpl implements TestService {
     @Override
     public boolean saveBatch(Collection<TestPO> entityList) {
-        return false;
+        return true;
     }
 
     @Override

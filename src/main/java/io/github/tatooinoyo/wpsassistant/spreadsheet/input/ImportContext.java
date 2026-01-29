@@ -1,8 +1,10 @@
 package io.github.tatooinoyo.wpsassistant.spreadsheet.input;
 
+import com.alibaba.excel.context.AnalysisContext;
 import jakarta.annotation.Nonnull;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,13 +32,17 @@ public class ImportContext {
     private int successCount; //  实际保存成功数
     private int failCount; //  失败数（校验 + 保存）
     private int maxErrors = 1000; // 最大失败记录限制
-    private ImportStatus status = ImportStatus.PROCESSING;
+    private ImportStatus status = ImportStatus.PROCESSING; // 整体的导入状态
+    private boolean rowAborted;
     private boolean aborted;
 
     private String errorFileId = null; // LargeImportStrategy 处理时,使用
 
     @Nonnull
     private final Map<Integer, List<ImportError>> importErrors = new HashMap<>();
+    // EasyExcel 读取时的上下文
+    @Setter
+    private AnalysisContext analysisContext;
 
     /* ========= 行为方法 ========= */
 
@@ -61,6 +67,13 @@ public class ImportContext {
     }
 
 
+    public void resetRowAborted() {
+        rowAborted = false;
+    }
+
+    public void rowAbort() {
+        rowAborted = true;
+    }
     public void abort() {
         this.status = ImportStatus.FAIL;
     }
