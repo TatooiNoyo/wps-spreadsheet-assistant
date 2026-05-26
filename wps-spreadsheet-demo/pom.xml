@@ -13,6 +13,11 @@
     <name>wps-spreadsheet-demo</name>
     <description>Demo app and integration tests</description>
 
+    <properties>
+        <!-- 示例模块仅用于本地运行，不发布到 Maven Central -->
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.github.tatooinoyo</groupId>

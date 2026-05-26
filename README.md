@@ -38,11 +38,14 @@ wps-assistant/                         # 父 POM（无 src）
 
 ## 发布
 
-默认构建不启用 Central 发布插件。需要发布时启用 release profile：
+默认构建不启用 Central 发布插件。需要发布时启用 `release` profile：
 
 ```bash
 ./mvnw -Prelease deploy
 ```
+
+发布到 Maven Central 的模块：`api`、`core`、`servlet`、`spring` 及父 POM。  
+`wps-spreadsheet-demo` 为本地示例，已通过 `maven.deploy.skip=true` 排除，不会上传。
 
 ## 迁移指南
 
