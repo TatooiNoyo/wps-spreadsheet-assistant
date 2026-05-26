@@ -1,16 +1,51 @@
 # WPS电子表格助手
 
-## 介绍
+## v2 介绍
 
-该项目以简便业务中与WPS电子表格的操作.
+`wps-assistant` v2 是一个用于业务系统中导入、导出 WPS/Excel（xlsx）数据的分层组件库。
 
-着重于简化单模型数据的读取与下载流程.
+它聚焦于单模型场景下的完整流程：
 
-功能如下:
-- [x] 下载实体模型的表格模板
-- [x] 读取WPS表格数据
-- [x] 校验导入数据
-- [x] 解析WPS表格内单元格内嵌图片数据,并预处理
-- [x] 导出数据为WPS表格
-- [x] 下载WPS模板时,提供数据模型属性的非空判断标识
-- [x] 下载WPS模板时,提供数据模型属性的可选项支持
+- 下载模板
+- 导入解析
+- 数据校验
+- WPS 图片公式（`DISPIMG`）解析与持久化
+- 常规导出与大数据游标导出
+- 模板必填标识与下拉选项
+
+## v2 模块结构
+
+```
+wps-assistant/                         # 父 POM（无 src）
+├── wps-spreadsheet-api/src/main/java  # L1 契约与领域模型
+├── wps-spreadsheet-core/src/main/java # L2/L3 核心实现
+├── wps-spreadsheet-servlet/src/main/java
+├── wps-spreadsheet-spring/src/main/java
+└── wps-spreadsheet-demo/src/main/java # L5 示例应用
+```
+
+- `wps-spreadsheet-api`：领域模型与端口接口（无 Servlet 依赖）
+- `wps-spreadsheet-core`：应用编排 + EasyExcel/WPS 基础设施实现
+- `wps-spreadsheet-servlet`：Servlet 输出适配
+- `wps-spreadsheet-spring`：Spring Multipart 适配
+- `wps-spreadsheet-demo`：可运行的 Spring Boot 示例
+
+## 构建
+
+```bash
+./mvnw -DskipTests compile
+```
+
+## 发布
+
+默认构建不启用 Central 发布插件。需要发布时启用 release profile：
+
+```bash
+./mvnw -Prelease deploy
+```
+
+## 迁移指南
+
+v1 -> v2 的改动和替代接口请查看：
+
+- `MIGRATION_V2.md`
