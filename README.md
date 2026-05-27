@@ -45,7 +45,7 @@ wps-assistant/                         # 父 POM（无 src）
 ```
 
 发布到 Maven Central 的模块：`api`、`core`、`servlet`、`spring` 及父 POM。  
-`wps-spreadsheet-demo` 为本地示例，已通过 `maven.deploy.skip=true` 排除，不会上传。
+`wps-spreadsheet-demo` 为本地示例，已通过 `maven.deploy.skip=true` 与 `central-publishing-maven-plugin` 的 `skipPublishing=true` 排除，不会上传到 Central。
 
 ## 迁移指南
 

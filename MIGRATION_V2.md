@@ -65,5 +65,5 @@ v2 将发布插件移动到了 `release` profile 中。
 ./mvnw -Prelease deploy
 ```
 
-**不会发布** `wps-spreadsheet-demo`（该模块在 `wps-spreadsheet-demo/pom.xml` 中设置了 `maven.deploy.skip=true`）。  
+**不会发布** `wps-spreadsheet-demo`（该模块设置了 `maven.deploy.skip=true`，并在 `central-publishing-maven-plugin` 中配置 `skipPublishing=true`）。  
 GitHub Actions 发布 workflow 使用 `-Prelease` profile，与父 POM 一致。
